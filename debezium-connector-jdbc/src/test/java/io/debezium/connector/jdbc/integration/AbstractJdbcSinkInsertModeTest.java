@@ -124,6 +124,32 @@ public abstract class AbstractJdbcSinkInsertModeTest extends AbstractJdbcSinkTes
 
     @ParameterizedTest
     @ArgumentsSource(SinkRecordFactoryArgumentsProvider.class)
+    public void testInsertModeInsertWithPrimaryKeyModeRecordKeyNull(SinkRecordFactory factory) {
+        final Map<String, String> properties = getDefaultSinkConfig();
+        properties.put(JdbcSinkConnectorConfig.SCHEMA_EVOLUTION, SchemaEvolutionMode.BASIC.getValue());
+        properties.put(JdbcSinkConnectorConfig.PRIMARY_KEY_MODE, PrimaryKeyMode.RECORD_KEY.getValue());
+        properties.put(JdbcSinkConnectorConfig.INSERT_MODE, InsertMode.INSERT.getValue());
+        properties.put(JdbcSinkConnectorConfig.DELETE_ENABLED, Boolean.TRUE.toString());
+        startSinkConnector(properties);
+        assertSinkConnectorIsRunning();
+
+        final String tableName = randomTableName();
+        final String topicName = topicName("server1", "schema", tableName);
+
+        final SinkRecord deleteRecord = factory.deleteRecordWithNulls(topicName);
+        final SinkRecord createRecord = factory.createRecordWithoutNulls(topicName);
+        consume(deleteRecord);
+        consume(createRecord);
+
+        final TableAssert tableAssert = TestHelper.assertTable(dataSource(), destinationTableName(createRecord));
+        tableAssert.exists().hasNumberOfRows(1).hasNumberOfColumns(2);
+
+        getSink().assertColumnType(tableAssert, "age", ValueType.NUMBER, 28);
+        getSink().assertColumnType(tableAssert, "name", ValueType.TEXT, "Mark");
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(SinkRecordFactoryArgumentsProvider.class)
     public void testInsertModeInsertWithPrimaryKeyModeRecordValue(SinkRecordFactory factory) {
         final Map<String, String> properties = getDefaultSinkConfig();
         properties.put(JdbcSinkConnectorConfig.SCHEMA_EVOLUTION, SchemaEvolutionMode.BASIC.getValue());

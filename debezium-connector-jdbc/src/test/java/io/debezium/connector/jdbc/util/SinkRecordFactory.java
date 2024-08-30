@@ -108,6 +108,13 @@ public interface SinkRecordFactory {
                 .build();
     }
 
+    default Schema recordSchema() {
+        return SchemaBuilder.struct()
+                .field("age", Schema.OPTIONAL_INT32_SCHEMA)
+                .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+                .build();
+    }
+
     default Schema nickNameFieldSchema(UnaryOperator<String> columnNameTransformation) {
         return SchemaBuilder.string()
                 .optional()
@@ -234,6 +241,19 @@ public interface SinkRecordFactory {
                 .after(columnNameTransformation.apply("id"), key)
                 .after(columnNameTransformation.apply("name"), "John Doe")
                 .after(columnNameTransformation.apply("nick_name_"), "John Doe$")
+                .source("ts_ms", (int) Instant.now().getEpochSecond())
+                .build();
+    }
+
+    default SinkRecord createRecordWithoutNulls(String topicName) {
+        return SinkRecordBuilder.create()
+                .flat(isFlattened())
+                .name("prefix")
+                .topic(topicName)
+                .recordSchema(recordSchema())
+                .sourceSchema(basicSourceSchema())
+                .after("age", 28)
+                .after("name", "Mark")
                 .source("ts_ms", (int) Instant.now().getEpochSecond())
                 .build();
     }
@@ -375,6 +395,19 @@ public interface SinkRecordFactory {
                 .key("id", (byte) 1)
                 .before("id", (byte) 1)
                 .before("name", "John Doe")
+                .source("ts_ms", (int) Instant.now().getEpochSecond())
+                .build();
+    }
+
+    default SinkRecord deleteRecordWithNulls(String topicName) {
+        return SinkRecordBuilder.delete()
+                .flat(isFlattened())
+                .name("prefix")
+                .topic(topicName)
+                .recordSchema(recordSchema())
+                .sourceSchema(basicSourceSchema())
+                .before("age", null)
+                .before("name", null)
                 .source("ts_ms", (int) Instant.now().getEpochSecond())
                 .build();
     }

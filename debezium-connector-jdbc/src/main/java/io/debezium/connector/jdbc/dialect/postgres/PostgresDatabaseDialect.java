@@ -211,4 +211,9 @@ public class PostgresDatabaseDialect extends GeneralDatabaseDialect {
         }
         return columnName;
     }
+
+    @Override
+    public String equalsOperator() {
+        return " IS NOT DISTINCT FROM ";
+    }
 }

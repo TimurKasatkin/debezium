@@ -572,6 +572,11 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
         return String.format("'%s'", value);
     }
 
+    @Override
+    public String equalsOperator() {
+        return "=";
+    }
+
     protected String getTypeName(int jdbcType, int length) {
         return getTypeName(jdbcType, Size.length(length));
     }
@@ -780,7 +785,7 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
         final FieldDescriptor field = record.getFields().get(fieldName);
         final String columnName = resolveColumnName(field);
         final ColumnDescriptor column = table.getColumnByName(columnName);
-        return toIdentifier(columnName) + "=" + field.getQueryBinding(column, record.getAfterStruct());
+        return toIdentifier(columnName) + equalsOperator() + field.getQueryBinding(column, record.getAfterStruct());
     }
 
     private static boolean isColumnNullable(String columnName, Collection<String> primaryKeyColumnNames, int nullability) {
