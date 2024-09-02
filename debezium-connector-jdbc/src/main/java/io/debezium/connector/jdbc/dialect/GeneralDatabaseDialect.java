@@ -378,7 +378,7 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
 
         if (!record.getKeyFieldNames().isEmpty()) {
             builder.append(" WHERE ");
-            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> columnNameEqualsBinding(name, table, record));
+            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> whereColumnNameEqualsBinding(name, table, record));
         }
 
         return builder.build();
@@ -392,7 +392,7 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
 
         if (!record.getKeyFieldNames().isEmpty()) {
             builder.append(" WHERE ");
-            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> columnNameEqualsBinding(name, table, record));
+            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> whereColumnNameEqualsBinding(name, table, record));
         }
 
         return builder.build();
@@ -570,6 +570,11 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
     @Override
     public String getFormattedTimestampWithTimeZone(String value) {
         return String.format("'%s'", value);
+    }
+
+    @Override
+    public String equalsOperation(String columnIdentifier, Object value, String queryBinding) {
+        return columnIdentifier + "=" + queryBinding;
     }
 
     protected String getTypeName(int jdbcType, int length) {
@@ -781,6 +786,17 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
         final String columnName = resolveColumnName(field);
         final ColumnDescriptor column = table.getColumnByName(columnName);
         return toIdentifier(columnName) + "=" + field.getQueryBinding(column, record.getAfterStruct());
+    }
+
+    private String whereColumnNameEqualsBinding(String fieldName, TableDescriptor table, SinkRecordDescriptor record) {
+        final FieldDescriptor field = record.getFields().get(fieldName);
+        final String columnName = resolveColumnName(field);
+        final ColumnDescriptor column = table.getColumnByName(columnName);
+        final Object value = Optional.ofNullable(record.getKeyStruct(connectorConfig.getPrimaryKeyMode()))
+                .map(it -> it.get(fieldName))
+                .orElse(null);
+        final String queryValueBinding = field.getQueryBinding(column, value);
+        return equalsOperation(toIdentifier(columnName), value, queryValueBinding);
     }
 
     private static boolean isColumnNullable(String columnName, Collection<String> primaryKeyColumnNames, int nullability) {

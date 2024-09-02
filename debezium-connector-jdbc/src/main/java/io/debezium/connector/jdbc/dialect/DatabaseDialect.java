@@ -369,4 +369,14 @@ public interface DatabaseDialect {
      * @return the list of bounded values
      */
     List<ValueBindDescriptor> bindValue(FieldDescriptor field, int startIndex, Object value);
+
+    /**
+     * Symbolic representation of equals operation for specified dialect.
+     *
+     * @param columnIdentifier column representation in table
+     * @param value            the value to compare, may be {@code null}
+     * @param queryBinding     bounded value
+     * @return string equals representation
+     */
+    String equalsOperation(String columnIdentifier, Object value, String queryBinding);
 }

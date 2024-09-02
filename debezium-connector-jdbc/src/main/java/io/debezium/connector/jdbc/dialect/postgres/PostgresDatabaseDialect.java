@@ -211,4 +211,12 @@ public class PostgresDatabaseDialect extends GeneralDatabaseDialect {
         }
         return columnName;
     }
+
+    @Override
+    public String equalsOperation(String columnIdentifier, Object value, String queryBinding) {
+        if (value == null) {
+            return String.format("(%s IS NULL OR coalesce(%s, NULL) = NULL)", columnIdentifier, queryBinding);
+        }
+        return super.equalsOperation(columnIdentifier, value, queryBinding);
+    }
 }
