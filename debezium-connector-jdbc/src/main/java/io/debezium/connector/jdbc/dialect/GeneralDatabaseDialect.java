@@ -378,7 +378,7 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
 
         if (!record.getKeyFieldNames().isEmpty()) {
             builder.append(" WHERE ");
-            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> columnNameEqualsBinding(name, table, record));
+            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> whereColumnNameEqualsBinding(name, table, record));
         }
 
         return builder.build();
@@ -392,7 +392,7 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
 
         if (!record.getKeyFieldNames().isEmpty()) {
             builder.append(" WHERE ");
-            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> columnNameEqualsBinding(name, table, record));
+            builder.appendList(" AND ", record.getKeyFieldNames(), (name) -> whereColumnNameEqualsBinding(name, table, record));
         }
 
         return builder.build();
@@ -572,6 +572,11 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
         return String.format("'%s'", value);
     }
 
+    @Override
+    public String equalsCondition(String columnIdentifier, Object value, String queryBinding) {
+        return columnIdentifier + "=" + queryBinding;
+    }
+
     protected String getTypeName(int jdbcType, int length) {
         return getTypeName(jdbcType, Size.length(length));
     }
@@ -683,18 +688,21 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
         }
     }
 
+    private Object getColumnValue(String fieldName, String columnName, SinkRecordDescriptor record) {
+        if (record.getNonKeyFieldNames().contains(fieldName)) {
+            return getColumnValueFromValueField(fieldName, record);
+        }
+        else {
+            return getColumnValueFromKeyField(fieldName, record, columnName);
+        }
+    }
+
     protected String columnQueryBindingFromField(String fieldName, TableDescriptor table, SinkRecordDescriptor record) {
         final FieldDescriptor field = record.getFields().get(fieldName);
         final String columnName = resolveColumnName(field);
         final ColumnDescriptor column = table.getColumnByName(columnName);
 
-        final Object value;
-        if (record.getNonKeyFieldNames().contains(fieldName)) {
-            value = getColumnValueFromValueField(fieldName, record);
-        }
-        else {
-            value = getColumnValueFromKeyField(fieldName, record, columnName);
-        }
+        final Object value = getColumnValue(fieldName, columnName, record);
         return record.getFields().get(fieldName).getQueryBinding(column, value);
     }
 
@@ -781,6 +789,16 @@ public class GeneralDatabaseDialect implements DatabaseDialect {
         final String columnName = resolveColumnName(field);
         final ColumnDescriptor column = table.getColumnByName(columnName);
         return toIdentifier(columnName) + "=" + field.getQueryBinding(column, record.getAfterStruct());
+    }
+
+    private String whereColumnNameEqualsBinding(String fieldName, TableDescriptor table, SinkRecordDescriptor record) {
+        final FieldDescriptor field = record.getFields().get(fieldName);
+        final String columnName = resolveColumnName(field);
+        final ColumnDescriptor column = table.getColumnByName(columnName);
+
+        final Object value = getColumnValue(fieldName, columnName, record);
+        final String queryValueBinding = field.getQueryBinding(column, value);
+        return equalsCondition(toIdentifier(columnName), value, queryValueBinding);
     }
 
     private static boolean isColumnNullable(String columnName, Collection<String> primaryKeyColumnNames, int nullability) {

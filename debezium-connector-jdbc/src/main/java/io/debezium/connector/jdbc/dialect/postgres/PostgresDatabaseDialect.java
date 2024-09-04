@@ -211,4 +211,14 @@ public class PostgresDatabaseDialect extends GeneralDatabaseDialect {
         }
         return columnName;
     }
+
+    @Override
+    public String equalsCondition(String columnIdentifier, Object value, String queryBinding) {
+        if (value == null) {
+            // Expression coalesce(%s, NULL) = NULL) always NULL and need for saving parameter binding
+            // Postgres optimize condition to 'columnName IS NULL' and use index for `columnName`
+            return String.format("(%s IS NULL OR coalesce(%s, NULL) = NULL)", columnIdentifier, queryBinding);
+        }
+        return super.equalsCondition(columnIdentifier, value, queryBinding);
+    }
 }

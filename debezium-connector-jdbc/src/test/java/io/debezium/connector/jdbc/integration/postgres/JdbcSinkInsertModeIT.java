@@ -192,6 +192,44 @@ public class JdbcSinkInsertModeIT extends AbstractJdbcSinkInsertModeTest {
         getSink().assertColumnType(tableAssert, "nick_name$", ValueType.TEXT, "John Doe$", "John Doe$");
     }
 
+    @ParameterizedTest
+    @ArgumentsSource(SinkRecordFactoryArgumentsProvider.class)
+    public void testInsertModeShouldProperlyDeleteAndCreateRecordWithoutPrimaryKey(SinkRecordFactory factory) throws Exception {
+        final Map<String, String> properties = getDefaultSinkConfig();
+        properties.put(JdbcSinkConnectorConfig.SCHEMA_EVOLUTION, SchemaEvolutionMode.NONE.getValue());
+        properties.put(JdbcSinkConnectorConfig.PRIMARY_KEY_MODE, PrimaryKeyMode.RECORD_KEY.getValue());
+        properties.put(JdbcSinkConnectorConfig.INSERT_MODE, InsertMode.INSERT.getValue());
+        properties.put(JdbcSinkConnectorConfig.DELETE_ENABLED, Boolean.TRUE.toString());
+        startSinkConnector(properties);
+        assertSinkConnectorIsRunning();
+
+        final String tableName = randomTableName();
+        final String topicName = topicName("server1", "schema", tableName);
+
+        final SinkRecord createRecordWithNulls = factory.createRecordWithNulls(topicName);
+        final String tableNameTarget = destinationTableName(createRecordWithNulls);
+        final String sql = "CREATE TABLE %s (age int, name varchar(255))";
+        getSink().execute(String.format(sql, tableNameTarget));
+
+        consume(createRecordWithNulls);
+        final TableAssert tableAssertBefore = TestHelper.assertTable(dataSource(), tableNameTarget);
+        tableAssertBefore.exists().hasNumberOfRows(1).hasNumberOfColumns(2);
+
+        getSink().assertColumnHasNullValue(tableAssertBefore, "age");
+        getSink().assertColumnType(tableAssertBefore, "name", ValueType.TEXT, "Mark");
+
+        final SinkRecord deleteRecord = factory.deleteRecordWithNulls(topicName);
+        final SinkRecord createRecord = factory.createRecordWithoutNulls(topicName);
+        consume(deleteRecord);
+        consume(createRecord);
+
+        final TableAssert tableAssert = TestHelper.assertTable(dataSource(), tableNameTarget);
+        tableAssert.exists().hasNumberOfRows(1).hasNumberOfColumns(2);
+
+        getSink().assertColumnType(tableAssert, "age", ValueType.NUMBER, 28);
+        getSink().assertColumnType(tableAssert, "name", ValueType.TEXT, "Mark");
+    }
+
     private static Schema buildGeoTypeSchema(String type) {
 
         SchemaBuilder schemaBuilder = SchemaBuilder.struct()
