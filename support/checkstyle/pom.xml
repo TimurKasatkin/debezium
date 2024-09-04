@@ -3,7 +3,7 @@
     <parent>
         <groupId>io.debezium</groupId>
         <artifactId>debezium-build-parent</artifactId>
-        <version>2.7.1.Final</version>
+        <version>2.7.1.Final-patched</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
