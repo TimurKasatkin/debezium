@@ -54,6 +54,13 @@ public interface SinkRecordFactory {
         return SchemaBuilder.int32().build();
     }
 
+    default Schema recordSchema() {
+        return SchemaBuilder.struct()
+                .field("age", Schema.OPTIONAL_INT32_SCHEMA)
+                .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+                .build();
+    }
+
     /**
      * Returns a single field key schema.
      */
@@ -392,6 +399,54 @@ public interface SinkRecordFactory {
                 .before("id1", (byte) 1)
                 .before("id2", 10)
                 .before("name", "John Doe")
+                .source("ts_ms", (int) Instant.now().getEpochSecond())
+                .build();
+    }
+
+    default SinkRecord createRecordWithNulls(String topicName) {
+        return SinkRecordBuilder.create()
+                .flat(isFlattened())
+                .name("prefix")
+                .topic(topicName)
+                .key("age", null)
+                .key("name", "Mark")
+                .keySchema(recordSchema())
+                .recordSchema(recordSchema())
+                .sourceSchema(basicSourceSchema())
+                .after("age", null)
+                .after("name", "Mark")
+                .source("ts_ms", (int) Instant.now().getEpochSecond())
+                .build();
+    }
+
+    default SinkRecord createRecordWithoutNulls(String topicName) {
+        return SinkRecordBuilder.create()
+                .flat(isFlattened())
+                .name("prefix")
+                .topic(topicName)
+                .key("age", 28)
+                .key("name", "Mark")
+                .keySchema(recordSchema())
+                .recordSchema(recordSchema())
+                .sourceSchema(basicSourceSchema())
+                .after("age", 28)
+                .after("name", "Mark")
+                .source("ts_ms", (int) Instant.now().getEpochSecond())
+                .build();
+    }
+
+    default SinkRecord deleteRecordWithNulls(String topicName) {
+        return SinkRecordBuilder.delete()
+                .flat(isFlattened())
+                .name("prefix")
+                .topic(topicName)
+                .key("age", null)
+                .key("name", "Mark")
+                .keySchema(recordSchema())
+                .recordSchema(recordSchema())
+                .sourceSchema(basicSourceSchema())
+                .before("age", null)
+                .before("name", "Mark")
                 .source("ts_ms", (int) Instant.now().getEpochSecond())
                 .build();
     }

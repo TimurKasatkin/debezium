@@ -2,6 +2,13 @@
 
 All notable changes are documented in this file. Release numbers follow [Semantic Versioning](http://semver.org)
 
+
+## 2.7.1.Final-patched
+September 4th 2024
+
+### Fixes since 2.7.1.Final-patched
+* Support comparision of nullable fields in Postgres
+
 ## 2.7.1.Final
 August 8th 2024 [Detailed release notes](https://issues.redhat.com/secure/ReleaseNote.jspa?projectId=12317320&version=12430010)
 
